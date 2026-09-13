@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Runtime } from '../src/core/runtime.js';
+import { startControl } from '../src/transport/control.js';
+import type { RuntimeConfig } from '../src/core/types.js';
+
+test('local control requires a one-use browser bootstrap, private cookie, and same-origin mutation', async t => {
+  const workspace = await mkdtemp(join(tmpdir(), 'capyra-control-'));
+  const config: RuntimeConfig = { workspace, stateDir: join(workspace, '.capyra'), port: 0, controlPort: 0, exposure: 'compact', plugins: [], maxTasks: 10, maxConcurrent: 2 };
+  const runtime = new Runtime(config, async () => { throw new Error('No plugins'); });
+  await runtime.start(); const control = await startControl(runtime, config, { pending: () => [], decide() {}, revoke() {} });
+  t.after(async () => { await control.close(); await runtime.close(); await rm(workspace, { recursive: true, force: true }); });
+  const headers = { 'X-Capyra-Local': '1', Origin: control.url, 'Content-Type': 'application/json' };
+  assert.equal((await fetch(control.url + '/health')).status, 200);
+  assert.equal((await fetch(control.url + '/api/state', { headers })).status, 401);
+  const nonce = new URL(control.openUrl).hash.slice('#bootstrap='.length);
+  assert(!(await (await fetch(control.url)).text()).includes(nonce));
+  const bootstrap = await fetch(control.url + '/api/bootstrap', { method: 'POST', headers, body: JSON.stringify({ nonce }) });
+  assert.equal(bootstrap.status, 200); const setCookie = bootstrap.headers.get('set-cookie')!;
+  assert.match(setCookie, /HttpOnly/); assert.match(setCookie, /SameSite=Strict/);
+  const cookie = setCookie.split(';')[0];
+  assert.equal((await fetch(control.url + '/api/bootstrap', { method: 'POST', headers, body: JSON.stringify({ nonce }) })).status, 403);
+  const state = await fetch(control.url + '/api/state', { headers: { ...headers, Cookie: cookie } });
+  assert.equal(state.status, 200); assert(!(await state.text()).includes(nonce));
+  assert.equal((await fetch(control.url + '/api/pause', { method: 'POST', headers: { ...headers, Cookie: cookie, Origin: 'https://attacker.example' }, body: '{"paused":true}' })).status, 403);
+  assert.equal((await fetch(control.url + '/api/pause', { method: 'POST', headers: { ...headers, Cookie: cookie }, body: '{"paused":true}' })).status, 200);
+  assert.equal(runtime.isPaused, true);
+});

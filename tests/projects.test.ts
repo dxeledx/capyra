@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import { mkdir, mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+import plugin, { type ProjectsService } from '../src/plugins/projects.js';
+import type { PluginContext, ToolContext, ToolDefinition } from '../src/core/types.js';
+
+test('project registration and selection persist without deleting directories or leaking mutable registry references', async t => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'capyra-projects-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const first = path.join(root, 'first'); const second = path.join(root, 'second');
+  await mkdir(first); await mkdir(second); await writeFile(path.join(second, 'valuable'), 'keep');
+  let service: ProjectsService;
+  let list: ToolDefinition;
+  const context: PluginContext = { workspace: first, stateDir: path.join(root, 'state'), config: {}, provide(_name, value) { service = value as ProjectsService; }, service() { throw new Error('unused'); }, registerTool(tool) { list = tool; return () => {}; }, guard() {}, onEvent() {}, onDispose() {} };
+  await plugin.setup(context);
+  const added = await service!.register({ name: 'Second', path: second });
+  await service!.select(added.id);
+  const remote = await list!.execute({}, { workspace: first, owner: 'remote-scoped-to-first', signal: new AbortController().signal, taskId: 'test', progress() {} } as ToolContext);
+  assert.doesNotMatch(JSON.stringify(remote), /Second|second/);
+  assert.match(JSON.stringify(remote), /primary/);
+  await assert.rejects(service!.register({ path: second }), /already registered/);
+  service!.list()[0]!.name = 'not persisted';
+  await plugin.setup(context);
+  assert.equal(service!.current().id, added.id);
+  assert.notEqual(service!.list()[0]!.name, 'not persisted');
+  await assert.rejects(service!.remove(added.id), /active/);
+  await service!.select('primary'); await service!.remove(added.id);
+  assert.equal(await readFile(path.join(second, 'valuable'), 'utf8'), 'keep');
+  await assert.rejects(service!.select(added.id), /Unknown/);
+});

@@ -1,0 +1,34 @@
+node_modules/
+dist/
+.capyra/
+capyra.json
+capyra.local.json
+capyra-plugins/
+*.tgz
+*.log
+*.bak
+*.tmp
+.DS_Store
+.env*
+coverage/
+artifacts/
+
+# Local hosting state and generated relay output
+sites-relay/.openai/
+sites-relay/.sites-runtime/
+sites-relay/site.tar.gz
+
+# Private deployment records are not part of the public source tree
+cloud/staging/
+cloud/hong-kong/
+cloud/deployment-review.md
+cloud/DEPLOYMENT-STAGING.md
+cloud/environment.prefix.example
+docs/evidence/
+docs/performance.md
+docs/progress.md
+docs/product-direction.md
+docs/reference-coverage.md
+docs/research/
+docs/validation/
+docs/validation.md

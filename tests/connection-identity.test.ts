@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test from 'node:test';
+import { createIdentityService } from '../src/identity/client.js';
+import { startIdentityCloud } from '../src/identity/cloud.js';
+
+test('the paired local client signs bridge publications, preserves its fixed URL and removes its own route', async t => {
+  const directory = await realpath(await mkdtemp(join(tmpdir(), 'capyra-bridge-client-')));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const cloud = await startIdentityCloud({ stateDir: join(directory, 'cloud'), port: 0 });
+  t.after(() => cloud.close());
+  const client = createIdentityService({ stateDir: join(directory, 'device'), cloudUrl: cloud.url, pollIntervalMs: 0 });
+  t.after(() => client.close());
+  assert.equal(client.bridgePublicUrl(), undefined);
+  await client.register({ email: 'bridge-owner@example.test', password: 'local fixture bridge password' });
+  const pairing = await client.startPairing();
+  const bound = await client.bind({ code: pairing.code, name: 'Bridge fixture', scope: { workspaces: [directory], capabilities: ['workspace__read'] } });
+  const fixed = `${cloud.url}/devices/${bound.device!.id}/bridge`;
+  assert.equal(client.bridgePublicUrl(), fixed);
+  const first = await client.publishBridge('https://first-fixture.trycloudflare.com');
+  assert.equal(first.publicUrl, fixed); assert.equal(first.upstream, 'https://first-fixture.trycloudflare.com');
+  assert.ok(first.expiresAt > Date.now() && first.expiresAt <= Date.now() + 300_000);
+  const replacement = await client.publishBridge('https://replacement-fixture.trycloudflare.com');
+  assert.equal(replacement.publicUrl, fixed); assert.equal(replacement.upstream, 'https://replacement-fixture.trycloudflare.com');
+  assert.doesNotMatch(JSON.stringify(await client.listDevices()), /first-fixture|replacement-fixture|privateKey|signature/);
+  await assert.rejects(client.publishBridge('https://other.example.com'), /Quick Tunnel/);
+  await client.updateScope(bound.device!.id, { workspaces: [directory], capabilities: ['workspace__read', 'workspace__search'] });
+  await client.removeBridge();
+  assert.equal((await client.listDevices())[0].bridge, undefined);
+  await client.unbind(); assert.equal(client.bridgePublicUrl(), undefined);
+  await assert.rejects(client.publishBridge('https://first-fixture.trycloudflare.com'), /Bind|device/);
+});

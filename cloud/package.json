@@ -1,0 +1,7 @@
+{
+  "name": "capyra-account-service",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node start.mjs" },
+  "engines": { "node": ">=22.16" }
+}

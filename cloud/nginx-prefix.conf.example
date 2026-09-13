@@ -1,0 +1,21 @@
+# Include inside the EXISTING HTTPS server block for the account service origin.
+# Keep its current listen, certificate, ACME locations, and other applications.
+location = /capyra {
+    return 308 /capyra/;
+}
+
+location ^~ /capyra/ {
+    client_max_body_size 32k;
+    # The trailing slash strips /capyra/ before forwarding to the account API.
+    proxy_pass http://127.0.0.1:4320/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $http_host;
+    proxy_set_header Connection "";
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_cookie_path /v1 /capyra/v1;
+    proxy_redirect off;
+    proxy_connect_timeout 5s;
+    proxy_read_timeout 45s;
+    # Account actions use POST bodies and headers, never URL query credentials.
+    access_log off;
+}

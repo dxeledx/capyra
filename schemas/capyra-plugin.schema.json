@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://capyra.local/schemas/capyra-plugin.schema.json",
+  "title": "Capyra Plugin Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "apiVersion",
+    "id",
+    "version",
+    "title",
+    "description",
+    "entry",
+    "permissions",
+    "requires",
+    "configSchema"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "apiVersion": { "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,31}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "entry": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//)[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*\\.(?:mjs|js)$"
+    },
+    "permissions": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      }
+    },
+    "requires": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]{0,31}$"
+      }
+    },
+    "configSchema": {
+      "type": "object"
+    },
+    "ai": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["brief"],
+      "properties": {
+        "brief": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 12000
+        }
+      }
+    }
+  }
+}

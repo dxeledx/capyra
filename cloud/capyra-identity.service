@@ -1,0 +1,25 @@
+[Unit]
+Description=Capyra account and device service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=capyra
+Group=capyra
+WorkingDirectory=/opt/capyra
+EnvironmentFile=/etc/capyra-identity.env
+ExecStart=/usr/bin/node /opt/capyra/cloud/start.mjs
+Restart=on-failure
+RestartSec=5
+StateDirectory=capyra-identity
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/capyra-identity
+
+[Install]
+WantedBy=multi-user.target

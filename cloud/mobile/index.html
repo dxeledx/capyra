@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Capyra · 请求确认</title><link rel="stylesheet" href="./approve-assets/style.css"><script src="./approve-assets/app.js" defer></script></head>
+<body><main><header><p class="brand">CAPYRA</p><h1>确认电脑上的请求</h1><p>核对设备、工作区和完整参数后，决定是否允许这一次操作。也可以在电脑本机确认。</p></header><p id="message" role="status" aria-live="polite"></p>
+<section id="login"><h2>登录你的 Capyra 账号</h2><form id="login-form"><label>邮箱<input id="email" type="email" autocomplete="username" required></label><label>密码<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">登录</button></form></section>
+<section id="account" hidden><div class="toolbar"><span id="who"></span><button id="refresh" type="button">刷新</button><button id="logout" type="button">退出</button></div><p>“仅本机”表示结果保留在电脑上；此页面暂不展示执行结果。</p><div id="requests"></div></section>
+</main></body></html>

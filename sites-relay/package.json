@@ -1,0 +1,11 @@
+{
+  "name": "capyra-sites-relay",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bash scripts/build.sh",
+    "validate": "node scripts/validate-artifact.mjs",
+    "db:generate": "drizzle-kit generate"
+  },
+  "devDependencies": { "drizzle-kit": "0.31.4", "drizzle-orm": "0.44.5" }
+}

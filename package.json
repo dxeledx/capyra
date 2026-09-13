@@ -1,0 +1,84 @@
+{
+  "name": "capyra",
+  "version": "0.4.6",
+  "description": "A lightweight, composable local AI capability platform for ChatGPT and MCP clients.",
+  "license": "MIT",
+  "author": "dxeledx",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dxeledx/capyra.git"
+  },
+  "homepage": "https://github.com/dxeledx/capyra#readme",
+  "bugs": {
+    "url": "https://github.com/dxeledx/capyra/issues"
+  },
+  "keywords": [
+    "mcp",
+    "chatgpt",
+    "local-first",
+    "ai-agent",
+    "developer-tools",
+    "plugins"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22.16"
+  },
+  "bin": {
+    "capyra": "dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/sdk.js",
+    "./plugin-devkit": "./dist/plugin-devkit.js",
+    "./schemas/capyra-plugin.schema.json": "./schemas/capyra-plugin.schema.json"
+  },
+  "files": [
+    "dist",
+    "public",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    "docs/agents-operations.md",
+    "docs/architecture.md",
+    "docs/client-ui.md",
+    "docs/connection-operations.md",
+    "docs/delivery.md",
+    "docs/plugins.md",
+    "docs/security-review.md",
+    "docs/sites-connection.md",
+    "docs/skills.md",
+    "schemas",
+    "cloud/admin.mjs",
+    "cloud/Caddyfile.example",
+    "cloud/capyra-identity.service",
+    "cloud/Dockerfile",
+    "cloud/environment.example",
+    "cloud/mobile",
+    "cloud/nginx-prefix.conf.example",
+    "cloud/package.json",
+    "cloud/README.md",
+    "cloud/start.mjs",
+    "npm-shrinkwrap.json"
+  ],
+  "scripts": {
+    "dev": "node --import tsx src/cli.ts start",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/cli.js start",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "check": "npm run build && npm test",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "ajv": "8.20.0",
+    "express": "5.2.1",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "22.20.1",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2"
+  }
+}

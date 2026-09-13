@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Capyra Observer</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <main>
+    <header><div><p class="eyebrow">CAPYRA · OBSERVER</p><h1>工作正在发生</h1><p class="muted">在独立只读界面中查看本机任务与运行状态。</p></div><button id="refresh" type="button">刷新</button></header>
+    <p id="connection" role="status" aria-live="polite">正在连接本机工作台…</p>
+    <section class="metrics" aria-label="运行指标">
+      <article><span>运行中的任务</span><strong id="running">—</strong></article>
+      <article><span>内存占用</span><strong id="memory">—</strong></article>
+      <article><span>已启用插件</span><strong id="plugins">—</strong></article>
+      <article><span>运行时间</span><strong id="uptime">—</strong></article>
+    </section>
+    <section class="workspace"><span class="eyebrow">当前工作区</span><p id="workspace">—</p></section>
+    <section class="tasks"><div class="section-heading"><h2>最近任务</h2><span id="task-count" class="muted"></span></div><p id="empty" class="muted" hidden>还没有任务记录。开始使用已连接的客户端后，进度会显示在这里。</p><div class="table-scroll"><table><thead><tr><th>任务</th><th>状态</th><th>更新于</th><th>详情</th></tr></thead><tbody id="tasks"></tbody></table></div></section>
+    <section id="detail-panel" hidden><div class="section-heading"><h2 id="detail-title">任务详情</h2><button id="close-detail" type="button">关闭</button></div><pre id="detail" tabindex="0"></pre></section>
+    <footer>此页面通过 Capyra 插件契约提供，继续使用本机控制台的独立会话保护。</footer>
+  </main>
+</body>
+</html>

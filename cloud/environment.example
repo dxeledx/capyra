@@ -1,0 +1,10 @@
+CAPYRA_IDENTITY_HOST=127.0.0.1
+CAPYRA_IDENTITY_PORT=4320
+CAPYRA_IDENTITY_ORIGIN=https://accounts.example.com
+CAPYRA_IDENTITY_STATE=/var/lib/capyra-identity
+# The following four variables enable managed Cloudflare connections together.
+# Store the real file outside the repository, owned by root with mode 0600.
+# CF_ACCOUNT_ID=
+# CF_ZONE_ID=
+# CF_BASE_DOMAIN=devices.example.com
+# CF_API_TOKEN=

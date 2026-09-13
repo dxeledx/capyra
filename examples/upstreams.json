@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "workspace": "..",
+  "plugins": [
+    {
+      "id": "word-count",
+      "module": "./word-count.mjs",
+      "enabled": false,
+      "grants": [],
+      "config": {}
+    },
+    {
+      "id": "local-mcp",
+      "module": "mcp",
+      "enabled": false,
+      "grants": ["mcp:call"],
+      "config": {
+        "transport": "stdio",
+        "command": "node",
+        "args": ["/absolute/path/to/your-mcp-server.mjs"],
+        "allowTools": ["list_items", "create_item"],
+        "readOnlyTools": ["list_items"],
+        "timeoutMs": 60000
+      }
+    },
+    {
+      "id": "remote-mcp",
+      "module": "mcp",
+      "enabled": false,
+      "grants": ["mcp:call"],
+      "config": {
+        "transport": "http",
+        "url": "https://your-mcp-server.example/mcp",
+        "allowTools": ["list_items", "create_item"],
+        "readOnlyTools": ["list_items"],
+        "timeoutMs": 60000
+      }
+    }
+  ]
+}
