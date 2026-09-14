@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-2f5d50.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A522.16-43853d.svg)](https://nodejs.org/)
 [![MCP](https://img.shields.io/badge/Protocol-MCP-7657ff.svg)](https://modelcontextprotocol.io/)
-[![Version](https://img.shields.io/badge/version-0.4.8-6b8e5f.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-0.4.9-6b8e5f.svg)](package.json)
 
 [快速开始](#快速开始) · [连接 ChatGPT](#连接-chatgpt) · [插件开发](#插件开发) · [安全模型](#安全模型) · [开发文档](#开发文档)
 
@@ -205,7 +205,7 @@ capyra agents daemon status
 
 ChatGPT 通过四个 MCP 工具形成视觉操作闭环：`computer__prepare` 明确准备本机组件，`computer__status` 检查环境，`computer__screenshot` 返回原生图片与坐标元数据，`computer__act` 根据最新截图执行一组鼠标键盘操作并返回新的截图。桌面控制本身不需要额外模型 API Key。用户要求安装和使用后，ChatGPT 可以通过 `plugin-dev__install_builtin` 完成受控安装、授权和启用，不需要用户执行终端命令。
 
-当前实现面向 macOS 14 或更新版本的主显示器，需要本机编译工具与系统屏幕录制、辅助功能权限。首次准备原生组件、截图和键鼠操作分别受 `computer:prepare`、`computer:read` 与 `computer:execute` 控制；截图和动作默认强制逐次确认，也可由本机明确改为继承全局批准策略。桌面操作不受项目目录限制；截图可能包含其他应用的信息。安装、权限、工具示例与验收步骤见[桌面控制指南](docs/computer-use.md)。
+当前实现面向 macOS 14 或更新版本的主显示器，需要本机编译工具与系统屏幕录制、辅助功能权限。首次准备原生组件、截图和键鼠操作分别受 `computer:prepare`、`computer:read` 与 `computer:execute` 控制；截图和动作默认跟随工作台的逐次确认或自动批准设置，也可由本机单独改为每次确认。桌面操作不受项目目录限制；截图可能包含其他应用的信息。安装、权限、工具示例与验收步骤见[桌面控制指南](docs/computer-use.md)。
 
 ## 安全模型
 

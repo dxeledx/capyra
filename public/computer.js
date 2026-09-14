@@ -87,7 +87,7 @@ window.capyraComputer = (() => {
   }
   async function register() {
     if (plugin()) return;
-    await mutation('/api/plugins/install', { id: 'computer', module: 'builtin:computer', grants: [], config: {} }, '桌面插件已添加，保持停用且未授予权限。');
+    await mutation('/api/plugins/install', { id: 'computer', module: 'builtin:computer', grants: [], config: { approvalMode: 'inherit' } }, '桌面插件已添加，保持停用且未授予权限。');
     render();
   }
   document.addEventListener('DOMContentLoaded', () => {

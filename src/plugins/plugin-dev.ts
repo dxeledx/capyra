@@ -39,7 +39,7 @@ async function draftRoot(workspace: string, input: string, id: string): Promise<
 const plugin: CapyraPlugin = {
   apiVersion: 1,
   id: 'plugin-dev',
-  version: '0.2.0',
+  version: '0.2.1',
   title: 'AI 插件开发台',
   description: '让 ChatGPT 或编码 AI 创建标准插件项目，并提供机器契约、隔离预检和受控安装。',
   permissions: ['plugin:read', 'plugin:write', 'plugin:execute', 'host:update'],
@@ -115,7 +115,7 @@ const plugin: CapyraPlugin = {
         if (!Array.isArray(grants) || grants.some(permission => typeof permission !== 'string')) throw new Error('grants 必须是权限字符串数组');
         const host = context.service<PluginHost>('host.runtime');
         const existing = host.config.plugins.find(entry => entry.id === id);
-        if (!existing) await host.installPlugin({ id, module: `builtin:${id}`, enabled: false, grants: [...grants] });
+        if (!existing) await host.installPlugin({ id, module: `builtin:${id}`, enabled: false, grants: [...grants], config: { approvalMode: 'inherit' } });
         else {
           if (existing.module && existing.module !== `builtin:${id}`) throw new Error('同名插件已经指向其他模块，不能替换');
           await host.configurePlugin(id, existing.config ?? {}, [...grants]);

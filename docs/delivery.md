@@ -1,4 +1,4 @@
-# Capyra 0.4.8 使用说明
+# Capyra 0.4.9 使用说明
 
 Capyra 在本机管理工作区、文件、命令、Git 和编码代理。ChatGPT 默认通过 Sites 固定入口连接本机 MCP，OAuth 和任务批准也在本机完成；Quick Tunnel 可作为临时备用。默认无需 Capyra 账号或自建服务器。
 
@@ -7,7 +7,7 @@ Capyra 在本机管理工作区、文件、命令、Git 和编码代理。ChatGP
 需要 Node.js 22.16 或更新版本。安装交付包：
 
 ```sh
-npm install -g /完整路径/capyra-0.4.8.tgz
+npm install -g /完整路径/capyra-0.4.9.tgz
 cd /你的工作区
 capyra init
 capyra start --open
@@ -44,6 +44,8 @@ Sites 模式的“连接状态”只显示本机 Capyra、Sites 设备通道、C
 工作区和审阅工具默认返回文本与结构化结果，不再要求 ChatGPT 加载 HTML 模板，因此正常使用不会出现 `Failed to fetch template` 卡片。交互卡片实现仍保留为可选能力；只有在 `client-ui` 插件配置中设置 `cards: true` 才关联模板。连接地址与 OAuth 无需重配；升级后在 ChatGPT 的 Capyra 插件详情点击一次 Refresh 更新应用定义。
 
 默认逐次确认。可在“待你确认 → 批准设置”选择自动批准和结果去向；自动模式默认将新请求结果返回客户端，旧的仅本机任务仍不会因此外发。切换设置会取消尚未开始的旧请求。首次连接 OAuth 授权和暂停访问仍有效。自动模式下，共享 ChatGPT 账号的其他使用者也可能发起操作，已发送内容对该账号可见。
+
+Computer Use 的截图与键鼠操作默认跟随这里的批准设置。在“桌面控制 → 配置权限与批准”中可改成每次桌面调用都单独确认；首次准备原生组件无论哪种模式都需要本机确认。0.4.8 曾把当前电脑迁移成强制逐次确认，0.4.9 已恢复为跟随全局设置，避免 ChatGPT 的截图请求在 50 秒审批窗口后被取消。
 
 ## 用 ChatGPT 开发插件
 
