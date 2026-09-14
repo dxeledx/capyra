@@ -21,13 +21,15 @@ export interface OAuthController {
   router: RequestHandler;
   requireAuth: RequestHandler;
   pending(): AuthorizationRequest[];
-  grants(): Array<{ id: string; clientId: string; clientName: string; expiresAt: string }>;
-  decide(id: string, allow: boolean): void;
+  grants(): Array<{ id: string; clientId: string; clientName: string; label?: string; status: 'active' | 'paused'; createdAt: string; lastUsedAt?: string; requestCount: number; expiresAt: string }>;
+  decide(id: string, allow: boolean, label?: string): void;
+  setLabel(grantId: string, label?: string): void;
+  setPaused(grantId: string, paused: boolean): void;
   revoke(grantId?: string): void;
   close(): void;
 }
 interface Pending extends AuthorizationRequest { clientId: string; params: AuthorizationParams; expiresAt: number; redirect?: string }
-interface Grant { id: string; clientId: string; expiresAt: number }
+interface Grant { id: string; clientId: string; label?: string; paused: boolean; createdAt: number; lastUsedAt?: number; requestCount: number; expiresAt: number }
 interface Code { clientId: string; params: AuthorizationParams; expiresAt: number; grantId: string }
 interface Token { clientId: string; grantId: string; expiresAt: number; kind: 'access' | 'refresh' }
 export interface OAuthOptions { stateDir?: string; onAuthorized?(event: { owner: string; clientId: string; clientName: string }): void }
@@ -35,6 +37,14 @@ export interface OAuthOptions { stateDir?: string; onAuthorized?(event: { owner:
 const secret = () => randomBytes(32).toString('base64url');
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
+function connectionLabel(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'string') throw new Error('连接备注必须是文本');
+  const label = value.trim();
+  if (!label) return undefined;
+  if (label.length > 80 || /[\u0000-\u001f\u007f]/.test(label)) throw new Error('连接备注最多 80 个字符，不能包含控制字符');
+  return label;
+}
 
 export function validRedirectUri(value: string): boolean {
   try {
@@ -52,6 +62,8 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
   const grants = new Map<string, Grant>();
   const tokens = new Map<string, Token>();
   const router = express.Router();
+  const lastUsagePersisted = new Map<string, number>();
+  let usageDirty = false;
   // 授权按公开 issuer 隔离。磁盘只含令牌摘要；待批准请求及单次兑换码不跨重启复用。
   const file = options.stateDir ? join(options.stateDir, `oauth-${hash(issuerKey).slice(0, 24)}.json`) : undefined;
   function persist() {
@@ -68,6 +80,8 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
       chmodSync(file, 0o600);
       const directory = openSync(options.stateDir!, 'r');
       try { fsyncSync(directory); } finally { closeSync(directory); }
+      usageDirty = false;
+      for (const grant of grants.values()) lastUsagePersisted.set(grant.id, grant.lastUsedAt ?? 0);
     } catch (error) { try { unlinkSync(temp); } catch {} throw error; }
   }
   if (file && existsSync(file)) {
@@ -79,7 +93,23 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
     }
     for (const [id, grant] of saved.grants) {
       if (typeof id !== 'string' || grant?.id !== id || !clients.has(grant.clientId) || !Number.isFinite(grant.expiresAt)) throw new Error('OAuth grant state is invalid.');
-      if (grant.expiresAt > Date.now()) grants.set(id, grant);
+      if (grant.label !== undefined) connectionLabel(grant.label);
+      if (grant.paused !== undefined && typeof grant.paused !== 'boolean') throw new Error('OAuth grant state is invalid.');
+      if (grant.createdAt !== undefined && !Number.isFinite(grant.createdAt) || grant.lastUsedAt !== undefined && !Number.isFinite(grant.lastUsedAt) || grant.requestCount !== undefined && (!Number.isSafeInteger(grant.requestCount) || grant.requestCount < 0)) throw new Error('OAuth grant state is invalid.');
+      if (grant.expiresAt > Date.now()) {
+        const normalized: Grant = {
+          id,
+          clientId: grant.clientId,
+          ...(grant.label ? { label: connectionLabel(grant.label) } : {}),
+          paused: grant.paused === true,
+          createdAt: Number.isFinite(grant.createdAt) ? grant.createdAt : grant.expiresAt - 24 * 60 * 60_000,
+          ...(Number.isFinite(grant.lastUsedAt) ? { lastUsedAt: grant.lastUsedAt } : {}),
+          requestCount: Number.isSafeInteger(grant.requestCount) ? grant.requestCount : 0,
+          expiresAt: grant.expiresAt,
+        };
+        grants.set(id, normalized);
+        lastUsagePersisted.set(id, normalized.lastUsedAt ?? 0);
+      }
     }
     for (const [key, token] of saved.tokens) {
       if (!/^[a-f0-9]{64}$/.test(key) || !token || !['access', 'refresh'].includes(token.kind) || !Number.isFinite(token.expiresAt)) throw new Error('OAuth token state is invalid.');
@@ -91,8 +121,8 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
   function revoke(grantId?: string) {
     for (const [key, token] of tokens) if (!grantId || token.grantId === grantId) tokens.delete(key);
     for (const [key, code] of codes) if (!grantId || code.grantId === grantId) codes.delete(key);
-    if (grantId) grants.delete(grantId);
-    else { grants.clear(); requests.clear(); }
+    if (grantId) { grants.delete(grantId); lastUsagePersisted.delete(grantId); }
+    else { grants.clear(); requests.clear(); lastUsagePersisted.clear(); }
     // 撤销先使内存授权失效。即使磁盘故障，也必须中止活请求和任务，再向本机报告保存失败。
     try { persist(); } finally { onRevoked?.(grantId); }
   }
@@ -118,6 +148,7 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
   function issue(grantId: string): OAuthTokens {
     const grant = grants.get(grantId);
     if (!grant || grant.expiresAt <= Date.now()) throw new InvalidGrantError('Authorization has expired. Connect again.');
+    if (grant.paused) throw new InvalidGrantError('Authorization is paused on the local Capyra device.');
     // 同一授权只保留当前令牌对；刷新保持任务 owner，同时立即淘汰旧令牌。
     for (const [key, token] of tokens) if (token.grantId === grantId) tokens.delete(key);
     const access = secret();
@@ -181,7 +212,15 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
     },
     async verifyAccessToken(access) {
       const token = tokens.get(hash(access));
-      if (!token || token.kind !== 'access' || token.expiresAt <= Date.now() || (grants.get(token.grantId)?.expiresAt ?? 0) <= Date.now()) throw new InvalidTokenError('Invalid or expired access token.');
+      const grant = token ? grants.get(token.grantId) : undefined;
+      if (!token || token.kind !== 'access' || token.expiresAt <= Date.now() || !grant || grant.expiresAt <= Date.now()) throw new InvalidTokenError('Invalid or expired access token.');
+      if (grant.paused) throw new InvalidTokenError('This connection is paused on the local Capyra device.');
+      const now = Date.now();
+      grant.lastUsedAt = now;
+      grant.requestCount++;
+      usageDirty = true;
+      // 界面立即读取内存中的实时计数，磁盘活动时间按窗口合并，避免每个 MCP 请求同步刷盘。
+      if (now - (lastUsagePersisted.get(grant.id) ?? 0) >= 30_000) persist();
       return { token: access, clientId: token.clientId, scopes: ['mcp'], expiresAt: Math.floor(token.expiresAt / 1000), resource, extra: { owner: `oauth:${token.grantId}` } };
     },
     async revokeToken(client, request) {
@@ -219,8 +258,18 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
   timer.unref();
   return { router, requireAuth,
     pending() { sweep(); return [...requests.values()].filter(request => !request.redirect).map(({ id, clientName, redirectUri, createdAt, verificationCode }) => ({ id, clientName, redirectUri, createdAt, verificationCode })); },
-    grants() { sweep(); return [...grants.values()].map(grant => ({ id: grant.id, clientId: grant.clientId, clientName: clients.get(grant.clientId)?.client_name ?? 'MCP client', expiresAt: new Date(grant.expiresAt).toISOString() })); },
-    decide(id, allow) {
+    grants() { sweep(); return [...grants.values()].sort((left, right) => (right.lastUsedAt ?? right.createdAt) - (left.lastUsedAt ?? left.createdAt)).map(grant => ({
+      id: grant.id,
+      clientId: grant.clientId,
+      clientName: clients.get(grant.clientId)?.client_name ?? 'MCP client',
+      ...(grant.label ? { label: grant.label } : {}),
+      status: grant.paused ? 'paused' : 'active',
+      createdAt: new Date(grant.createdAt).toISOString(),
+      ...(grant.lastUsedAt ? { lastUsedAt: new Date(grant.lastUsedAt).toISOString() } : {}),
+      requestCount: grant.requestCount,
+      expiresAt: new Date(grant.expiresAt).toISOString(),
+    })); },
+    decide(id, allow, label) {
       sweep();
       const request = requests.get(id);
       if (!request || request.redirect) throw new Error('Authorization request not found or already decided.');
@@ -229,7 +278,9 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
       if (allow) {
         const code = secret();
         const grantId = randomUUID();
-        grants.set(grantId, { id: grantId, clientId: request.clientId, expiresAt: Date.now() + 24 * 60 * 60_000 });
+        const now = Date.now();
+        const normalizedLabel = connectionLabel(label);
+        grants.set(grantId, { id: grantId, clientId: request.clientId, ...(normalizedLabel ? { label: normalizedLabel } : {}), paused: false, createdAt: now, requestCount: 0, expiresAt: now + 24 * 60 * 60_000 });
         persist();
         codes.set(hash(code), { clientId: request.clientId, params: request.params, expiresAt: Date.now() + 60_000, grantId });
         redirect.searchParams.set('code', code);
@@ -237,8 +288,25 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
       request.redirect = redirect.href;
       request.expiresAt = Date.now() + 60_000;
     },
+    setLabel(grantId, label) {
+      sweep();
+      const grant = grants.get(grantId);
+      if (!grant) throw new Error('连接不存在或已经过期');
+      const normalized = connectionLabel(label);
+      if (normalized) grant.label = normalized; else delete grant.label;
+      persist();
+    },
+    setPaused(grantId, paused) {
+      sweep();
+      const grant = grants.get(grantId);
+      if (!grant) throw new Error('连接不存在或已经过期');
+      if (grant.paused === paused) return;
+      grant.paused = paused;
+      // 暂停先在内存生效；即使保存失败，也必须立即中止这条连接的活请求和后台任务。
+      try { persist(); } finally { if (paused) onRevoked?.(grantId); }
+    },
     revoke,
     // 正常退出保留授权；显式撤销和入口变更才使持久令牌失效。
-    close() { clearInterval(timer); requests.clear(); codes.clear(); },
+    close() { clearInterval(timer); if (usageDirty) { try { persist(); } catch {} } requests.clear(); codes.clear(); },
   };
 }

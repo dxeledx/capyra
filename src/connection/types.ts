@@ -14,7 +14,7 @@ export interface ConnectionStatus {
   tunnel: { state: 'stopped' | 'starting' | 'established' | 'reconnecting' | 'error'; pid?: number; url?: string; since?: string; retryAt?: string; readiness?: ConnectionCheck; connections?: number };
   local: ConnectionCheck; public: ConnectionCheck; oauthDiscovery: ConnectionCheck; mcp: ConnectionCheck;
   network: ConnectionNetwork;
-  authorization: { state: 'unknown' | 'authorized' | 'revoked'; observedAt?: string; clientName?: string };
+  authorization: { state: 'unknown' | 'authorized' | 'paused' | 'revoked'; observedAt?: string; clientName?: string };
   toolCall: { state: 'not_observed' | 'observed'; observedAt?: string; clientName?: string; tool?: string; count: number };
   // 客户端自报名称不能证明 ChatGPT 身份；真实产品验收在独立 QA 记录中保存。
   chatgptVerification: 'not_verified';
@@ -43,7 +43,7 @@ export interface ConnectionService {
   restart(): Promise<ConnectionStatus>;
   restore(): Promise<ConnectionStatus>;
   diagnose(): Promise<ConnectionStatus>;
-  observeOAuth(event: { status: 'authorized' | 'revoked'; clientName?: string; selfTest?: boolean }): void;
+  observeOAuth(event: { status: 'authorized' | 'paused' | 'revoked'; clientName?: string; selfTest?: boolean }): void;
   observeToolCall(event: { clientName?: string; tool?: string; selfTest?: boolean }): void;
   close(): Promise<void>;
 }

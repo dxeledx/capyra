@@ -33,8 +33,10 @@ export interface RuntimeLike {
 
 export interface ControlOAuth {
   pending(): MaybePromise<Array<{ id: string; clientName: string; redirectUri: string; createdAt: string; verificationCode?: string }>>;
-  decide(id: string, approve: boolean): MaybePromise<unknown>;
-  revoke(): MaybePromise<unknown>;
+  decide(id: string, approve: boolean, label?: string): MaybePromise<unknown>;
+  setLabel?(id: string, label?: string): MaybePromise<unknown>;
+  setPaused?(id: string, paused: boolean): MaybePromise<unknown>;
+  revoke(id?: string): MaybePromise<unknown>;
   grants?(): MaybePromise<unknown>;
 }
 interface AccessController {
@@ -437,7 +439,19 @@ export async function startControl(
         // 返回给已登录的本机浏览器，由用户点击打开；不发起请求、不记录链接、不自动批准。
         json(response, 200, { localAuthorizeUrl }); return;
       } else if ((match = path.match(/^\/api\/oauth\/([^/]+)\/decide$/))) {
-        await oauth.decide(decodeURIComponent(match[1]), booleanField(body, 'approve'));
+        if (Object.keys(body).some(key => !['approve', 'label'].includes(key)) || body.label !== undefined && typeof body.label !== 'string') throw new RequestError(400, '连接批准参数无效。');
+        await oauth.decide(decodeURIComponent(match[1]), booleanField(body, 'approve'), body.label as string | undefined);
+      } else if ((match = path.match(/^\/api\/oauth\/([^/]+)\/label$/))) {
+        if (Object.keys(body).some(key => key !== 'label') || body.label !== undefined && typeof body.label !== 'string') throw new RequestError(400, '连接备注参数无效。');
+        if (!oauth.setLabel) throw new RequestError(409, '当前授权服务不支持连接备注。');
+        await oauth.setLabel(decodeURIComponent(match[1]), body.label as string | undefined);
+      } else if ((match = path.match(/^\/api\/oauth\/([^/]+)\/pause$/))) {
+        if (Object.keys(body).some(key => key !== 'paused')) throw new RequestError(400, '连接暂停参数无效。');
+        if (!oauth.setPaused) throw new RequestError(409, '当前授权服务不支持单独暂停连接。');
+        await oauth.setPaused(decodeURIComponent(match[1]), booleanField(body, 'paused'));
+      } else if ((match = path.match(/^\/api\/oauth\/([^/]+)\/revoke$/))) {
+        if (Object.keys(body).length) throw new RequestError(400, '撤销连接不接受额外参数。');
+        await oauth.revoke(decodeURIComponent(match[1]));
       } else if (path === '/api/oauth/revoke') {
         await oauth.revoke();
       } else if ((match = path.match(/^\/api\/access\/([^/]+)\/decide$/))) {

@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-2f5d50.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A522.16-43853d.svg)](https://nodejs.org/)
 [![MCP](https://img.shields.io/badge/Protocol-MCP-7657ff.svg)](https://modelcontextprotocol.io/)
-[![Version](https://img.shields.io/badge/version-0.4.6-6b8e5f.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-0.4.7-6b8e5f.svg)](package.json)
 
 [快速开始](#快速开始) · [连接 ChatGPT](#连接-chatgpt) · [插件开发](#插件开发) · [安全模型](#安全模型) · [开发文档](#开发文档)
 
@@ -154,6 +154,8 @@ MCP 入口与本机管理入口分别监听。公网连接只转发 MCP 与 OAut
 - **自动批准**：明确启用后自动执行新请求；仍受 OAuth、工作区、设备范围、暂停和插件策略约束。
 - **仅留本机**：任务可以执行，但完整结果不返回客户端。
 - **暂停与撤销**：暂停拒绝新请求并中断远程后台任务；撤销使对应 OAuth 令牌和请求失效。
+
+本机“待你确认 → ChatGPT 连接”会列出每条 OAuth 连接，可以添加本机备注、查看创建时间/最后访问/请求数，并单独暂停、恢复或撤销。ChatGPT 不会把登录邮箱或 OpenAI 账号 ID 提供给 MCP 服务，因此备注用于区分个人、工作等连接，不能视为经过 OpenAI 验证的账号身份。
 
 自动批准无法区分共享同一个 ChatGPT 账号的不同操作者。共享账号场景应使用逐次确认，并在不使用时暂停或撤销连接。
 

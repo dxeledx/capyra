@@ -61,7 +61,7 @@ const usage = `Capyra · 把对话中的想法，交给本机执行
 `;
 
 async function main() {
-  if (values.version) { console.log('0.4.6'); return; }
+  if (values.version) { console.log('0.4.7'); return; }
   if (values.help) { console.log(usage); return; }
   const configPath = resolve(values.config ?? 'capyra.json');
   const command = positionals[0] ?? 'start';
@@ -205,9 +205,17 @@ async function main() {
       if (config.port === 0) config.port = Number(new URL(mcp.localUrl).port);
       closeMcp = () => mcp.close();
       // 隧道地址变更会替换 OAuth 控制器；本机管理入口始终读取当前这一代。
+      const syncOAuthStatus = () => {
+        const grants = mcp.oauth.grants();
+        const active = grants.filter(grant => grant.status === 'active');
+        connection()?.observeOAuth({ status: active.length ? 'authorized' : grants.length ? 'paused' : 'revoked', clientName: (active.at(-1) ?? grants.at(-1))?.clientName });
+      };
       const oauthBridge = {
-        pending: () => mcp.oauth.pending(), decide: (id: string, approve: boolean) => mcp.oauth.decide(id, approve),
-        grants: () => mcp.oauth.grants(), revoke: () => { mcp.oauth.revoke(); connection()?.observeOAuth({ status: 'revoked' }); },
+        pending: () => mcp.oauth.pending(), decide: (id: string, approve: boolean, label?: string) => mcp.oauth.decide(id, approve, label),
+        grants: () => mcp.oauth.grants(),
+        setLabel: (id: string, label?: string) => mcp.oauth.setLabel(id, label),
+        setPaused: (id: string, paused: boolean) => { mcp.oauth.setPaused(id, paused); syncOAuthStatus(); },
+        revoke: (id?: string) => { mcp.oauth.revoke(id); syncOAuthStatus(); },
       };
       if (consoleProvider) {
         control = await consoleProvider.start(runtime, config, oauthBridge, { get mcpUrl() { return mcp.url; }, localMcpUrl: new URL('/mcp', mcp.localUrl).href, get publicUrl() { return config.publicUrl; }, access: mcp.access, onOpen: openBrowser });
@@ -235,7 +243,8 @@ async function main() {
         else await connected.restore();
         // 重启后从当前 OAuth 存储恢复授权摘要，避免把仍有效的连接显示成“未检测”。
         const existingGrants = mcp.oauth.grants();
-        if (existingGrants.length) connected.observeOAuth({ status: 'authorized', clientName: existingGrants.at(-1)?.clientName });
+        const activeGrants = existingGrants.filter(grant => grant.status === 'active');
+        if (existingGrants.length) connected.observeOAuth({ status: activeGrants.length ? 'authorized' : 'paused', clientName: (activeGrants.at(-1) ?? existingGrants.at(-1))?.clientName });
       };
       const bindIdentity = () => watchIdentity(mcp.access, () => mcp.oauth.revoke());
       let offIdentity = bindIdentity();
@@ -259,7 +268,7 @@ async function main() {
     startupComplete = true;
     if (values.stdio && (stdinEnded || process.stdin.readableEnded)) { await shutdown(); return; }
     const log = values.stdio ? console.error : console.log;
-    log(`\n  Capyra 0.4.6\n  工作区   ${config.workspace}\n  控制台   ${control?.url ?? '未启用'}\n  MCP      ${!mcpProvider ? '未启用' : values.stdio ? 'stdio' : `${config.publicUrl ?? `http://127.0.0.1:${config.port}`}/mcp`}\n  能力     ${runtime.listTools().length} 个工具 · ${config.exposure === 'compact' ? '精简目录' : '直接展示'}\n`);
+    log(`\n  Capyra 0.4.7\n  工作区   ${config.workspace}\n  控制台   ${control?.url ?? '未启用'}\n  MCP      ${!mcpProvider ? '未启用' : values.stdio ? 'stdio' : `${config.publicUrl ?? `http://127.0.0.1:${config.port}`}/mcp`}\n  能力     ${runtime.listTools().length} 个工具 · ${config.exposure === 'compact' ? '精简目录' : '直接展示'}\n`);
     for (const plugin of runtime.listPlugins()) if (plugin.status === 'error') log(`  插件 ${plugin.id} 未加载：${plugin.error}`);
     if (!control) log('  本机工作台未启用；MCP 协议入口可用，需要本机批准的请求将立即被拒绝。启用 console 插件后可完成授权和请求审批。\n');
     else if (!mcpProvider) log('  本机工作台已就绪；MCP 插件未启用，客户端连接入口已关闭。\n');

@@ -8,6 +8,7 @@
 .sidebar{scrollbar-width:none}.sidebar::-webkit-scrollbar{display:none}
 
 .workflow-card{margin-bottom:20px}.workflow-card>.muted{margin-top:12px}.workflow-card>.form-note{margin-top:7px}.workflow-card .workflow-note{margin-top:15px}.workflow-card .field-row>label{max-width:430px}.agent-pagination{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:18px}.agent-pagination>strong,.agent-pagination>.form-note{margin-right:auto}.agent-pagination>strong{font-size:12px;font-weight:500}.agent-detail>.detail-meta:first-child{margin-top:0}.agent-response{margin-top:10px}.agent-detail>.disclosure{margin-top:16px}@media(max-width:650px){.agent-pagination>strong,.agent-pagination>.form-note{flex-basis:100%;margin-bottom:3px}.agent-pagination .button{flex:1}.workflow-card .field-row>label{max-width:none}}
+.connection-grant{border:1px solid var(--line);border-radius:9px;padding:17px;background:#fbfcf8}.connection-grant .progress-note{margin-top:12px}.connection-grant .form-note{margin-top:7px}.connection-grant .disclosure{margin-top:14px}.badge.status-active{background:#e9f2df;color:#62844c}.badge.status-paused{background:#f8f0db;color:#987a3e}
 
 .connection-client-setup{margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}.connection-client-setup h3{font-size:15px;margin-bottom:10px}
 

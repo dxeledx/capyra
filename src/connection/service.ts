@@ -319,10 +319,10 @@ export class CloudflareConnectionService implements ConnectionService {
     }
     this.tunnel = { state: 'stopped' }; this.probes.public = unknown(); this.probes.mcp = unknown();
   }
-  observeOAuth(event: { status: 'authorized' | 'revoked'; clientName?: string; selfTest?: boolean }): void {
+  observeOAuth(event: { status: 'authorized' | 'paused' | 'revoked'; clientName?: string; selfTest?: boolean }): void {
     if (event.selfTest || this.closed) return;
     this.authorization = { state: event.status, observedAt: new Date().toISOString(), clientName: event.clientName ? redact(event.clientName).slice(0, 120) : undefined };
-    if (event.status === 'revoked') this.toolCall = { state: 'not_observed', count: 0 };
+    if (event.status !== 'authorized') this.toolCall = { state: 'not_observed', count: 0 };
   }
   observeToolCall(event: { clientName?: string; tool?: string; selfTest?: boolean }): void {
     if (event.selfTest || this.closed) return;
