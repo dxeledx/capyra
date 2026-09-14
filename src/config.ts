@@ -24,7 +24,8 @@ export const defaults = {
     { id: 'process', enabled: true, grants: ['process:read', 'process:execute'], config: { commands: { check: { command: 'npm', args: ['test'], timeoutMs: 60_000 } } } },
     { id: 'terminal', enabled: true, grants: ['terminal:read', 'terminal:execute'] },
     { id: 'agents', enabled: true, grants: ['agents:read', 'agents:execute'] },
-    { id: 'plugin-dev', enabled: true, grants: ['plugin:read', 'plugin:write', 'plugin:execute'] },
+    { id: 'computer', enabled: false, grants: [], requestedPermissions: ['computer:prepare', 'computer:read', 'computer:execute'] },
+    { id: 'plugin-dev', enabled: true, grants: ['plugin:read', 'plugin:write', 'plugin:execute', 'host:update'] },
     { id: 'connection', enabled: true, grants: [] },
     { id: 'presentation', enabled: true, grants: [] },
     { id: 'ui', enabled: true, grants: [] },
@@ -129,6 +130,7 @@ export async function resolvePlugin(entry: PluginEntry): Promise<CapyraPlugin> {
     case 'builtin:git': return (await import('./plugins/git.js')).default;
     case 'builtin:terminal': return (await import('./plugins/terminal.js')).default;
     case 'builtin:agents': return (await import('./plugins/agents.js')).default;
+    case 'builtin:computer': return (await import('./plugins/computer.js')).default;
     case 'builtin:plugin-dev': return (await import('./plugins/plugin-dev.js')).default;
     case 'builtin:identity': return (await import('./plugins/identity.js')).default;
     case 'builtin:connection': return (await import('./plugins/connection.js')).default;

@@ -1,4 +1,4 @@
-# Capyra 0.4.7 使用说明
+# Capyra 0.4.8 使用说明
 
 Capyra 在本机管理工作区、文件、命令、Git 和编码代理。ChatGPT 默认通过 Sites 固定入口连接本机 MCP，OAuth 和任务批准也在本机完成；Quick Tunnel 可作为临时备用。默认无需 Capyra 账号或自建服务器。
 
@@ -7,7 +7,7 @@ Capyra 在本机管理工作区、文件、命令、Git 和编码代理。ChatGP
 需要 Node.js 22.16 或更新版本。安装交付包：
 
 ```sh
-npm install -g /完整路径/capyra-0.4.7.tgz
+npm install -g /完整路径/capyra-0.4.8.tgz
 cd /你的工作区
 capyra init
 capyra start --open

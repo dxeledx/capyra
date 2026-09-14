@@ -15,7 +15,7 @@ export interface RuntimeLike {
   listTools(): MaybePromise<RegisteredTool[]>;
   listTasks(owner?: string): MaybePromise<TaskRecord[]>;
   getTask(id: string, owner?: string): MaybePromise<TaskRecord | undefined>;
-  submit(name: string, args: Record<string, unknown>, owner: string, workspace?: string): MaybePromise<unknown>;
+  submit(name: string, args: Record<string, unknown>, owner: string, workspace?: string, clientSession?: string): MaybePromise<unknown>;
   approveTask(id: string, approve: boolean, visibility?: 'client' | 'local'): MaybePromise<unknown>;
   cancelTask(id: string, owner?: string): MaybePromise<unknown>;
   setPluginEnabled(id: string, enabled: boolean): MaybePromise<unknown>;
@@ -204,6 +204,7 @@ export async function startControl(
   const assetNames = new Map([
     ['/', ['index.html', 'text/html; charset=utf-8']],
     ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
+    ['/computer.js', ['computer.js', 'text/javascript; charset=utf-8']],
     ['/style.css', ['style.css', 'text/css; charset=utf-8']],
   ]);
   async function asset(path: string) {

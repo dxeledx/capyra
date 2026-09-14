@@ -61,7 +61,7 @@ const usage = `Capyra · 把对话中的想法，交给本机执行
 `;
 
 async function main() {
-  if (values.version) { console.log('0.4.7'); return; }
+  if (values.version) { console.log('0.4.8'); return; }
   if (values.help) { console.log(usage); return; }
   const configPath = resolve(values.config ?? 'capyra.json');
   const command = positionals[0] ?? 'start';
@@ -268,7 +268,7 @@ async function main() {
     startupComplete = true;
     if (values.stdio && (stdinEnded || process.stdin.readableEnded)) { await shutdown(); return; }
     const log = values.stdio ? console.error : console.log;
-    log(`\n  Capyra 0.4.7\n  工作区   ${config.workspace}\n  控制台   ${control?.url ?? '未启用'}\n  MCP      ${!mcpProvider ? '未启用' : values.stdio ? 'stdio' : `${config.publicUrl ?? `http://127.0.0.1:${config.port}`}/mcp`}\n  能力     ${runtime.listTools().length} 个工具 · ${config.exposure === 'compact' ? '精简目录' : '直接展示'}\n`);
+    log(`\n  Capyra 0.4.8\n  工作区   ${config.workspace}\n  控制台   ${control?.url ?? '未启用'}\n  MCP      ${!mcpProvider ? '未启用' : values.stdio ? 'stdio' : `${config.publicUrl ?? `http://127.0.0.1:${config.port}`}/mcp`}\n  能力     ${runtime.listTools().length} 个工具 · ${config.exposure === 'compact' ? '精简目录' : '直接展示'}\n`);
     for (const plugin of runtime.listPlugins()) if (plugin.status === 'error') log(`  插件 ${plugin.id} 未加载：${plugin.error}`);
     if (!control) log('  本机工作台未启用；MCP 协议入口可用，需要本机批准的请求将立即被拒绝。启用 console 插件后可完成授权和请求审批。\n');
     else if (!mcpProvider) log('  本机工作台已就绪；MCP 插件未启用，客户端连接入口已关闭。\n');

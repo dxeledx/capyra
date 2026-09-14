@@ -14,7 +14,7 @@ export interface McpRuntime {
   config: RuntimeConfig;
   listTools(): RegisteredTool[];
   instructions(): string;
-  submit(name: string, args: Record<string, unknown>, owner: string, workspace?: string): Promise<TaskRecord>;
+  submit(name: string, args: Record<string, unknown>, owner: string, workspace?: string, clientSession?: string): Promise<TaskRecord>;
   getTask(id: string, owner?: string): TaskRecord | undefined;
   listTasks(owner?: string): TaskRecord[];
   cancelTask(id: string, owner?: string): Promise<unknown>;
@@ -93,7 +93,7 @@ function exposeTool(tool: RegisteredTool) {
     ...(tool.outputSchema ? { outputSchema: tool.outputSchema } : {}),
     annotations: { destructiveHint: tool.effect !== 'read', openWorldHint: tool.effect === 'execute', ...tool.annotations, readOnlyHint: tool.effect === 'read' },
     ...(tool.icons ? { icons: tool.icons } : {}),
-    _meta: { ...tool._meta, 'capyra/plugin': tool.pluginId, 'capyra/effect': tool.effect, 'capyra/permissions': tool.permissions },
+    _meta: { ...tool._meta, 'capyra/plugin': tool.pluginId, 'capyra/effect': tool.effect, 'capyra/permissions': tool.permissions, 'capyra/approval': tool.alwaysConfirm ? 'always' : 'configured' },
   };
 }
 function jsonResult(value: unknown, isError = false): CallToolResult {
@@ -121,6 +121,7 @@ interface McpProjectsService {
 interface WorkspaceBinding {
   projectId?: string;
   scope: 'conversation' | 'mcp_session' | 'request';
+  scopeId?: string;
   persist?(id: string): Promise<void>;
 }
 const projectService = (runtime: McpRuntime) => runtime.hasService?.('projects') ? runtime.service!<McpProjectsService>('projects') : undefined;
@@ -139,6 +140,7 @@ async function requestWorkspaceBinding(runtime: McpRuntime, owner: string, param
   return {
     projectId: selected.id,
     scope: 'conversation',
+    scopeId: key,
     async persist(id) { await service.bindConversation!(key, id); },
   };
 }
@@ -170,6 +172,7 @@ function isNativeClientTool(tool: RegisteredTool): boolean {
 }
 function dispatcher(runtime: McpRuntime, owner: string, access: AccessController, options: McpOptions, binding?: WorkspaceBinding) {
   let sessionProjectId = binding?.projectId;
+  const sessionScopeId = binding?.scopeId ?? randomUUID();
   const projects = () => projectService(runtime);
   if (!sessionProjectId) {
     try { sessionProjectId = projects()?.current().id; } catch { /* 没有项目服务时沿用运行时默认工作区。 */ }
@@ -346,7 +349,7 @@ function dispatcher(runtime: McpRuntime, owner: string, access: AccessController
         }
         // 老连接已经缓存了 capyra_call，也能通过 discover 获得并调用新的会话级工作区能力。
         if (name === workspaceTool.name) return await workspaceOperation(input, signal, generation);
-        const task = await runtime.submit(name, input, owner, root);
+        const task = await runtime.submit(name, input, owner, root, sessionScopeId);
         const abort = () => { void runtime.cancelTask(task.id, owner).catch(() => {}); };
         signal.addEventListener('abort', abort, { once: true });
         let timer: ReturnType<typeof setTimeout> | undefined;

@@ -3,7 +3,7 @@ import type { CallToolResult, ToolAnnotations } from '@modelcontextprotocol/sdk/
 export type Effect = 'read' | 'write' | 'execute';
 export type JsonSchema = { type: 'object'; properties?: Record<string, unknown>; required?: string[]; additionalProperties?: boolean; [key: string]: unknown };
 export interface Preview { title: string; description: string; before?: string; after?: string }
-export interface ToolContext { workspace: string; owner: string; signal: AbortSignal; taskId: string; progress(message: string): void }
+export interface ToolContext { workspace: string; owner: string; session?: string; signal: AbortSignal; taskId: string; progress(message: string): void }
 export interface ToolDefinition {
   name: string;
   title: string;
@@ -15,6 +15,8 @@ export interface ToolDefinition {
   publicCatalog?: boolean;
   /** 即使没有 UI 或原生文件参数，也可作为客户端直达工具进入精简目录。 */
   clientCatalog?: boolean;
+  /** 即使宿主处于自动批准模式，这个工具仍要求本机逐次确认。 */
+  alwaysConfirm?: boolean;
   annotations?: ToolAnnotations;
   outputSchema?: Record<string, unknown>;
   _meta?: Record<string, unknown>;
@@ -56,6 +58,7 @@ export type TaskStatus = 'preparing' | 'awaiting_approval' | 'queued' | 'running
 export interface TaskRecord {
   id: string;
   owner: string;
+  clientSession?: string;
   workspace?: string;
   resultVisibility?: 'client' | 'local';
   tool: string;
