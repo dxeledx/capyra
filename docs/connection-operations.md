@@ -1,13 +1,13 @@
 # 连接与日常运维
 
-默认采用本机 OAuth 与 Cloudflare Quick Tunnel 直连。文件、执行、批准和令牌均在本机；连接向导自动准备 cloudflared，用户无需自建服务器或注册账号。
+默认采用本机 OAuth 与 Sites 固定设备入口。文件、执行、批准和令牌均在本机；Quick Tunnel 与自备 Named Tunnel 收在高级连接选项中。
 
 ## 本机使用流程
 
 1. 运行 `capyra start --open`，选择工作区与能力。
 2. 在“连接 ChatGPT”点击“准备并启动连接”。
 3. 复制生成的 HTTPS MCP 地址到 ChatGPT，认证选择 OAuth。
-4. 在本机“待你确认”批准连接和任务。
+4. 在本机批准首次 OAuth 连接；个人模式下后续正常任务自动执行。
 
 Quick Tunnel 进程重建后可能生成新地址，届时需要更新 ChatGPT 保存的地址并重新授权。高级用户可自行配置 Named Tunnel。云端账号插件仅用于保留旧配置兼容，不在默认组合中启动；切换现有配置使用 `capyra local`。
 

@@ -91,7 +91,7 @@ export class Runtime {
     if (settings.autoResultVisibility !== 'local' && settings.autoResultVisibility !== 'client') throw new Error('autoResultVisibility 只能是 local 或 client');
     const next = { approvalMode: settings.approvalMode, autoResultVisibility: settings.autoResultVisibility };
     await this.queuePluginChange(async () => {
-      if ((this.config.approvalMode ?? 'ask') === next.approvalMode && (this.config.autoResultVisibility ?? 'client') === next.autoResultVisibility) return;
+      if ((this.config.approvalMode ?? 'auto') === next.approvalMode && (this.config.autoResultVisibility ?? 'client') === next.autoResultVisibility) return;
       this.approvalSettingsChanging = true;
       let committed = false;
       try {

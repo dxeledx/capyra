@@ -36,6 +36,7 @@ export interface OAuthOptions { stateDir?: string; onAuthorized?(event: { owner:
 
 const secret = () => randomBytes(32).toString('base64url');
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
+const grantLifetimeMs = 30 * 24 * 60 * 60_000;
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
 function connectionLabel(value: unknown): string | undefined {
   if (value === undefined || value === null) return undefined;
@@ -132,7 +133,8 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
     for (const [key, code] of codes) if (code.expiresAt <= now) codes.delete(key);
     for (const [key, token] of tokens) if (token.expiresAt <= now) tokens.delete(key);
     for (const [id, grant] of grants) if (grant.expiresAt <= now) revoke(id);
-    for (const [id, client] of clients) if ((client.client_id_issued_at ?? 0) * 1000 < now - 24 * 60 * 60_000 && ![...grants.values()].some(grant => grant.clientId === id) && ![...requests.values()].some(request => request.clientId === id)) clients.delete(id);
+    // DCR client_id 是客户端保存的长期注册身份。授权过期不等于客户端注册失效，
+    // 否则 ChatGPT 在重启后复用原 client_id 会收到 invalid_client。
   }
   function checkResource(requested?: URL) {
     if (requested && requested.href !== resource.href) throw new InvalidRequestError('The resource must match this Capyra MCP endpoint.');
@@ -190,7 +192,7 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
       res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self' ${issuer.origin}; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`);
       res.setHeader('X-Frame-Options', 'DENY');
       res.setHeader('Referrer-Policy', 'no-referrer');
-      res.type('html').send(`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>连接 Capyra</title><style nonce="${nonce}">body{margin:0;background:#f5f3ed;color:#263a31;font:16px/1.7 system-ui}main{max-width:480px;margin:12vh auto;padding:32px;background:white;border-radius:24px}h1{font-size:28px}code{display:block;font-size:36px;letter-spacing:8px;margin:24px 0;color:#2b6652}p{overflow-wrap:anywhere}.muted{color:#66746b;font-size:14px}</style><main><p class="muted">CAPYRA · 连接确认</p><h1>请在本机确认连接</h1><p><strong>${escapeHtml(request.clientName)}</strong> 请求访问你的 Capyra 工作区。</p><p>打开本机 Capyra 控制台，核对下方验证码与回调地址后批准。连接获准后，每次读取、执行和历史查询仍需本机确认。</p><code>${verificationCode}</code><p class="muted">回调：${escapeHtml(params.redirectUri)}</p><p id="status">正在等待本机确认。批准后会自动返回客户端。</p></main><script nonce="${nonce}">const status=document.getElementById('status');async function poll(){try{const response=await fetch('./oauth/pending/${id}',{cache:'no-store',credentials:'omit'});const result=await response.json();if(result.redirect){location.replace(result.redirect);return}if(!response.ok){status.textContent='连接请求已过期或已撤销，请返回客户端重新连接。';return}}catch{status.textContent='正在重试连接…'}setTimeout(poll,1500)}poll();</script></html>`);
+      res.type('html').send(`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>连接 Capyra</title><style nonce="${nonce}">body{margin:0;background:#f5f3ed;color:#263a31;font:16px/1.7 system-ui}main{max-width:480px;margin:12vh auto;padding:32px;background:white;border-radius:24px}h1{font-size:28px}code{display:block;font-size:36px;letter-spacing:8px;margin:24px 0;color:#2b6652}p{overflow-wrap:anywhere}.muted{color:#66746b;font-size:14px}</style><main><p class="muted">CAPYRA · 连接确认</p><h1>请在本机确认连接</h1><p><strong>${escapeHtml(request.clientName)}</strong> 请求访问你的 Capyra 工作区。</p><p>打开本机 Capyra 控制台，核对下方验证码与回调地址后批准。连接获准后，后续操作按照本机当前的个人模式或共享账号保护设置执行。</p><code>${verificationCode}</code><p class="muted">回调：${escapeHtml(params.redirectUri)}</p><p id="status">正在等待本机确认。批准后会自动返回客户端。</p></main><script nonce="${nonce}">const status=document.getElementById('status');async function poll(){try{const response=await fetch('./oauth/pending/${id}',{cache:'no-store',credentials:'omit'});const result=await response.json();if(result.redirect){location.replace(result.redirect);return}if(!response.ok){status.textContent='连接请求已过期或已撤销，请返回客户端重新连接。';return}}catch{status.textContent='正在重试连接…'}setTimeout(poll,1500)}poll();</script></html>`);
     },
     async challengeForAuthorizationCode(client, code) { return findCode(client, code).params.codeChallenge; },
     async exchangeAuthorizationCode(client, code, _verifier, redirectUri, requestedResource) {
@@ -280,7 +282,7 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
         const grantId = randomUUID();
         const now = Date.now();
         const normalizedLabel = connectionLabel(label);
-        grants.set(grantId, { id: grantId, clientId: request.clientId, ...(normalizedLabel ? { label: normalizedLabel } : {}), paused: false, createdAt: now, requestCount: 0, expiresAt: now + 24 * 60 * 60_000 });
+        grants.set(grantId, { id: grantId, clientId: request.clientId, ...(normalizedLabel ? { label: normalizedLabel } : {}), paused: false, createdAt: now, requestCount: 0, expiresAt: now + grantLifetimeMs });
         persist();
         codes.set(hash(code), { clientId: request.clientId, params: request.params, expiresAt: Date.now() + 60_000, grantId });
         redirect.searchParams.set('code', code);

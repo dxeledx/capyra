@@ -2,7 +2,7 @@ import type { CapyraPlugin } from '../core/types.js';
 import { startControl } from '../transport/control.js';
 
 const plugin: CapyraPlugin = {
-  apiVersion: 1, id: 'console', version: '0.2.0', title: '本机工作台',
+  apiVersion: 1, id: 'console', version: '0.3.0', title: '本机工作台',
   description: '只在本机开放的管理、审批和结果界面。', permissions: [],
   setup(ctx) {
     const handles: Awaited<ReturnType<typeof startControl>>[] = [];

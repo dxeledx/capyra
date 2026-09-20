@@ -61,7 +61,7 @@ const usage = `Capyra · 把对话中的想法，交给本机执行
 `;
 
 async function main() {
-  if (values.version) { console.log('0.4.9'); return; }
+  if (values.version) { console.log('0.5.0'); return; }
   if (values.help) { console.log(usage); return; }
   const configPath = resolve(values.config ?? 'capyra.json');
   const command = positionals[0] ?? 'start';
@@ -194,8 +194,11 @@ async function main() {
         closeControl = () => control!.close();
       }
     } else {
-      // 固定地址在OAuth控制器创建前确定，重启不会先切入临时realm再撤销旧任务。
-      const fixedDeviceUrl = identity()?.bridgePublicUrl();
+      // 固定地址在 OAuth 控制器创建前确定。Sites/Named 的已保存入口与身份插件入口
+      // 都必须直接进入原 realm，避免重启时先创建本机 issuer 再替换。
+      const rememberedConnection = connection()?.status().configuration;
+      const fixedDeviceUrl = identity()?.bridgePublicUrl()
+        ?? (rememberedConnection && ['sites', 'managed'].includes(rememberedConnection.mode) ? rememberedConnection.publicUrl : undefined);
       if (fixedDeviceUrl) config.publicUrl = fixedDeviceUrl;
       const mcp = await mcpProvider.start(runtime, config, { approvalTimeoutMs: consoleProvider ? undefined : 0, ...templateDiagnostics, onEvidence: event => {
         if (event.type === 'authorization') connection()?.observeOAuth({ status: 'authorized', clientName: event.clientName });
@@ -268,13 +271,13 @@ async function main() {
     startupComplete = true;
     if (values.stdio && (stdinEnded || process.stdin.readableEnded)) { await shutdown(); return; }
     const log = values.stdio ? console.error : console.log;
-    log(`\n  Capyra 0.4.9\n  工作区   ${config.workspace}\n  控制台   ${control?.url ?? '未启用'}\n  MCP      ${!mcpProvider ? '未启用' : values.stdio ? 'stdio' : `${config.publicUrl ?? `http://127.0.0.1:${config.port}`}/mcp`}\n  能力     ${runtime.listTools().length} 个工具 · ${config.exposure === 'compact' ? '精简目录' : '直接展示'}\n`);
+    log(`\n  Capyra 0.5.0\n  工作区   ${config.workspace}\n  控制台   ${control?.url ?? '未启用'}\n  MCP      ${!mcpProvider ? '未启用' : values.stdio ? 'stdio' : `${config.publicUrl ?? `http://127.0.0.1:${config.port}`}/mcp`}\n  能力     ${runtime.listTools().length} 个工具 · ${config.exposure === 'compact' ? '精简目录' : '直接展示'}\n`);
     for (const plugin of runtime.listPlugins()) if (plugin.status === 'error') log(`  插件 ${plugin.id} 未加载：${plugin.error}`);
     if (!control) log('  本机工作台未启用；MCP 协议入口可用，需要本机批准的请求将立即被拒绝。启用 console 插件后可完成授权和请求审批。\n');
     else if (!mcpProvider) log('  本机工作台已就绪；MCP 插件未启用，客户端连接入口已关闭。\n');
     else if (!values.stdio && !config.publicUrl) log(config.plugins.some(plugin => plugin.id === 'identity')
       ? '  已可在本机使用。打开控制台的连接向导，登录、绑定本机并连接 ChatGPT。\n'
-      : '  已可在本机使用。打开控制台的连接向导，准备免登录连接并连接 ChatGPT；可在本机选择逐次确认或自动批准。\n');
+      : '  已可在本机使用。打开控制台的连接向导连接 ChatGPT；默认个人模式，需要时可开启共享账号保护。\n');
     if (values.open) { if (control) openBrowser(control.openUrl); else log('  无法自动打开：本机工作台未启用。'); }
     for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, () => { void shutdown().then(() => process.exit(0), error => { console.error(error); process.exit(1); }); });
   } catch (error) { await shutdown(); throw error; }

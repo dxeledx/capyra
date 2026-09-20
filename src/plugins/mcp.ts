@@ -3,7 +3,7 @@ import { startMcpHttp, createMcpServer } from '../transport/mcp.js';
 import { createMcpExtensions } from '../client-ui/extensions.js';
 
 const plugin: CapyraPlugin = {
-  apiVersion: 1, id: 'mcp', version: '0.2.0', title: 'MCP 连接',
+  apiVersion: 1, id: 'mcp', version: '0.2.1', title: 'MCP 连接',
   description: '支持 HTTP、stdio 与 OAuth 的客户端连接入口。', permissions: [],
   setup(ctx) {
     ctx.provide('mcp.extensions', createMcpExtensions());

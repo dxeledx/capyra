@@ -83,6 +83,7 @@ export interface RuntimeConfig {
   controlPort: number;
   publicUrl?: string;
   exposure: 'direct' | 'compact';
+  /** auto 是个人模式；ask 开启共享账号保护并逐次在本机确认。 */
   approvalMode?: 'ask' | 'auto';
   autoResultVisibility?: 'local' | 'client';
   plugins: PluginEntry[];

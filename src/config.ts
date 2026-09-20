@@ -11,7 +11,7 @@ export const defaults = {
   port: 4317,
   controlPort: 4318,
   exposure: 'compact' as 'direct' | 'compact',
-  approvalMode: 'ask' as 'ask' | 'auto',
+  approvalMode: 'auto' as 'ask' | 'auto',
   autoResultVisibility: 'client' as 'local' | 'client',
   storagePlugin: 'storage',
   plugins: [
@@ -91,7 +91,7 @@ export async function loadConfig(path: string, overrides: Record<string, string 
   const workspace = await realpath(resolve(base, String(overrides.workspace ?? raw.workspace ?? '.')));
   const exposure = overrides.compact ? 'compact' : raw.exposure ?? 'direct';
   if (!['direct', 'compact'].includes(String(exposure))) throw new Error('exposure 只能是 direct 或 compact');
-  const approvalMode = raw.approvalMode ?? 'ask', autoResultVisibility = raw.autoResultVisibility ?? 'client';
+  const approvalMode = raw.approvalMode ?? 'auto', autoResultVisibility = raw.autoResultVisibility ?? 'client';
   if (approvalMode !== 'ask' && approvalMode !== 'auto') throw new Error('approvalMode 只能是 ask 或 auto');
   if (autoResultVisibility !== 'local' && autoResultVisibility !== 'client') throw new Error('autoResultVisibility 只能是 local 或 client');
   const port = int(overrides.port ?? raw.port ?? 4317, 0, 65535, 'port');
@@ -168,7 +168,7 @@ export function configWriter(path: string) {
         if (info.isSymbolicLink() || !info.isFile() || info.nlink !== 1) throw new Error('配置文件必须为普通独立文件');
         raw = JSON.parse(await readFile(path, 'utf8'));
       } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
-      const value = { ...raw, version: 1, workspace: config.workspace, port: config.port, controlPort: config.controlPort, exposure: config.exposure, approvalMode: config.approvalMode ?? 'ask', autoResultVisibility: config.autoResultVisibility ?? 'client', publicUrl: config.publicUrl, storagePlugin: config.storagePlugin, plugins: config.plugins, maxConcurrent: config.maxConcurrent, maxTasks: config.maxTasks };
+      const value = { ...raw, version: 1, workspace: config.workspace, port: config.port, controlPort: config.controlPort, exposure: config.exposure, approvalMode: config.approvalMode ?? 'auto', autoResultVisibility: config.autoResultVisibility ?? 'client', publicUrl: config.publicUrl, storagePlugin: config.storagePlugin, plugins: config.plugins, maxConcurrent: config.maxConcurrent, maxTasks: config.maxTasks };
       const temporary = resolve(dirname(path), `.capyra-config-${randomUUID()}.tmp`);
       await mkdir(dirname(path), { recursive: true });
       try { await writeFile(temporary, JSON.stringify(value, null, 2) + '\n', { mode: 0o600, flag: 'wx' }); await rename(temporary, path); }

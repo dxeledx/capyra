@@ -353,7 +353,7 @@ export async function startControl(
         let localAuthorizationAvailable = false;
         try { authorizationOrigins(publicUrl, extra.localMcpUrl); localAuthorizationAvailable = true; } catch { /* HTTP或公网入口尚未就绪时不提供备用授权。 */ }
         json(response, 200, {
-          config: { workspace: runtime.currentWorkspace?.() ?? config.workspace, exposure: config.exposure, port: config.port, controlPort: port, publicUrl, approvalMode: runtime.config.approvalMode ?? 'ask', autoResultVisibility: runtime.config.autoResultVisibility ?? 'client' },
+          config: { workspace: runtime.currentWorkspace?.() ?? config.workspace, exposure: config.exposure, port: config.port, controlPort: port, publicUrl, approvalMode: runtime.config.approvalMode ?? 'auto', autoResultVisibility: runtime.config.autoResultVisibility ?? 'client' },
           plugins,
           tools: tools.map(({ name, title, description, inputSchema, effect, permissions, pluginId }) => ({ name, title, description, inputSchema, effect, permissions, pluginId })),
           // 轮询只发送轻量摘要，文件内容与完整结果在用户打开详情时按需获取。
