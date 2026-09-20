@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-2f5d50.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A522.16-43853d.svg)](https://nodejs.org/)
 [![MCP](https://img.shields.io/badge/Protocol-MCP-7657ff.svg)](https://modelcontextprotocol.io/)
-[![Version](https://img.shields.io/badge/version-0.5.1-6b8e5f.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-0.5.2-6b8e5f.svg)](package.json)
 
 [快速开始](#快速开始) · [连接 ChatGPT](#连接-chatgpt) · [插件开发](#插件开发) · [安全模型](#安全模型) · [开发文档](#开发文档)
 

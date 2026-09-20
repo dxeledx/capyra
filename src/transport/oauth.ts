@@ -155,6 +155,23 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
     if (recovered) persist();
   }
 
+  function recoverRequestedChatGptClient(id: string, redirectUri: string): boolean {
+    if (issuer.pathname === '/' || clients.has(id) || !/^[a-f0-9-]{36}$/.test(id)) return false;
+    let redirect: URL;
+    try { redirect = new URL(redirectUri); } catch { return false; }
+    if (redirect.protocol !== 'https:' || redirect.hostname !== 'chatgpt.com' || !/^\/connector\/oauth\/[A-Za-z0-9_-]+$/.test(redirect.pathname) || redirect.search || redirect.hash) return false;
+    const source = [...clients.entries()].find(([sourceId, client]) => recoverableChatGptClient(sourceId, client) && client.redirect_uris.includes(redirect.href));
+    if (!source || clients.size >= 256) return false;
+    // ChatGPT 的开发者应用可能轮换 client_id，却继续使用已登记的专属回调。
+    // 仅复制公开 DCR 元数据；新的 client_id 仍必须走本机 OAuth 批准才能取得 grant/token。
+    const recovered: OAuthClientInformationFull = {
+      ...source[1], client_id: id, client_id_issued_at: Math.floor(Date.now() / 1000),
+      client_name: 'ChatGPT', redirect_uris: [redirect.href], token_endpoint_auth_method: 'none',
+    };
+    delete recovered.client_secret;
+    clients.set(id, recovered); persist(); return true;
+  }
+
   function revoke(grantId?: string) {
     for (const [key, token] of tokens) if (!grantId || token.grantId === grantId) tokens.delete(key);
     for (const [key, code] of codes) if (!grantId || code.grantId === grantId) codes.delete(key);
@@ -282,6 +299,12 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
     router.use('/.well-known/oauth-authorization-server', metadataHandler(metadata));
     router.use('/.well-known/oauth-protected-resource/mcp', metadataHandler({ resource: resource.href, authorization_servers: [issuer.href], scopes_supported: ['mcp'], resource_name: 'Capyra local workspace' }));
   }
+  router.get('/authorize', (req, _res, next) => {
+    const clientId = typeof req.query.client_id === 'string' ? req.query.client_id : undefined;
+    const redirectUri = typeof req.query.redirect_uri === 'string' ? req.query.redirect_uri : undefined;
+    try { if (clientId && redirectUri) recoverRequestedChatGptClient(clientId, redirectUri); next(); }
+    catch (error) { next(error); }
+  });
   router.use(mcpAuthRouter({ provider, issuerUrl: issuer, resourceServerUrl: resource, scopesSupported: ['mcp'], resourceName: 'Capyra local workspace',
     authorizationOptions: { rateLimit }, tokenOptions: { rateLimit }, clientRegistrationOptions: { rateLimit }, revocationOptions: { rateLimit } }));
   const authenticate = requireBearerAuth({ verifier: provider, requiredScopes: ['mcp'], resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(resource) });

@@ -1,6 +1,6 @@
 {
   "name": "capyra",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "A lightweight, composable local AI capability platform for ChatGPT and MCP clients.",
   "license": "MIT",
   "author": "dxeledx",
