@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { chmodSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import express, { type RequestHandler } from 'express';
 import { mcpAuthRouter, createOAuthMetadata, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/sdk/server/auth/router.js';
@@ -45,6 +45,20 @@ function connectionLabel(value: unknown): string | undefined {
   if (!label) return undefined;
   if (label.length > 80 || /[\u0000-\u001f\u007f]/.test(label)) throw new Error('连接备注最多 80 个字符，不能包含控制字符');
   return label;
+}
+
+function recoverableChatGptClient(id: unknown, client: unknown): client is OAuthClientInformationFull {
+  if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id) || !client || typeof client !== 'object') return false;
+  const value = client as OAuthClientInformationFull;
+  if (value.client_id !== id || value.client_name !== 'ChatGPT' || value.token_endpoint_auth_method !== 'none' || value.client_secret) return false;
+  if (!Array.isArray(value.redirect_uris) || value.redirect_uris.length < 1 || value.redirect_uris.length > 10) return false;
+  if (!value.redirect_uris.every(uri => {
+    try { const url = new URL(uri); return url.protocol === 'https:' && url.hostname === 'chatgpt.com' && /^\/connector\/oauth\/[A-Za-z0-9_-]+$/.test(url.pathname) && !url.search && !url.hash; }
+    catch { return false; }
+  })) return false;
+  if (value.grant_types?.some(type => !['authorization_code', 'refresh_token'].includes(type))) return false;
+  if (value.response_types?.some(type => type !== 'code')) return false;
+  return value.client_id_issued_at === undefined || Number.isFinite(value.client_id_issued_at);
 }
 
 export function validRedirectUri(value: string): boolean {
@@ -117,6 +131,28 @@ export function createOAuth(issuer: URL, onRevoked?: (grantId?: string) => void,
       if (token.expiresAt > Date.now() && grants.get(token.grantId)?.clientId === token.clientId) tokens.set(key, token);
     }
     chmodSync(file, 0o600);
+  }
+  if (file && issuer.pathname !== '/') {
+    let recovered = false;
+    // ChatGPT 可能在同一个自定义应用中继续使用旧 Quick Tunnel 注册的 DCR client_id。
+    // 固定设备入口只迁移严格匹配 ChatGPT 回调的公开客户端元数据；grant、token 和请求绝不跨 issuer 迁移。
+    for (const name of readdirSync(options.stateDir!).filter(name => /^oauth-[a-f0-9]{24}\.json$/.test(name))) {
+      const candidate = join(options.stateDir!, name);
+      if (candidate === file) continue;
+      try {
+        const saved = JSON.parse(readFileSync(candidate, 'utf8'));
+        if (saved?.version !== 1 || !Array.isArray(saved.clients) || saved.clients.length > 256) continue;
+        for (const entry of saved.clients) {
+          if (!Array.isArray(entry) || entry.length !== 2) continue;
+          const [id, client] = entry;
+          if (clients.size >= 256 || !recoverableChatGptClient(id, client)) continue;
+          const clientId = id as string;
+          if (clients.has(clientId)) continue;
+          clients.set(clientId, client); recovered = true;
+        }
+      } catch { /* 损坏或无关的历史 issuer 不影响当前固定连接。 */ }
+    }
+    if (recovered) persist();
   }
 
   function revoke(grantId?: string) {
